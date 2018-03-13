@@ -22,6 +22,7 @@ public class Population {
 	
 	private ArrayList<Chromosome> list; 
 	private String acidString; 
+	// TODO: Change fitnessMap to TreeMap to save time sorting key set. 
 	private HashMap<Integer, int[]> fitnessMap; 
 	private int sumOfFitnesses; 
 	
