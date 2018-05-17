@@ -1,6 +1,6 @@
 import java.util.ArrayList; 
 import java.util.Comparator; 
-import java.util.HashMap; 
+import java.util.TreeMap; 
 import java.util.Random; 
 import java.util.Set; 
 
@@ -22,8 +22,7 @@ public class Population {
 	
 	private ArrayList<Chromosome> list; 
 	private String acidString; 
-	// TODO: Change fitnessMap to TreeMap to save time sorting key set. 
-	private HashMap<Integer, int[]> fitnessMap; 
+	private TreeMap<Integer, int[]> fitnessMap; 
 	private int sumOfFitnesses; 
 	
 	
@@ -35,7 +34,7 @@ public class Population {
 	public Population(String acidString) {
 		this.list = new ArrayList<>(POP_SIZE); 
 		this.acidString = acidString; 
-		this.fitnessMap = new HashMap<>(); 
+		this.fitnessMap = new TreeMap<>(); 
 		this.sumOfFitnesses = 0; 
 	} 
 
@@ -297,13 +296,13 @@ public class Population {
 		// Get an ordered list of fitness to subtract from the random numbers. 
 		ArrayList<Integer> sortedFitnesses = new ArrayList<>(
 				this.fitnessMap.keySet()); 
-		sortedFitnesses.sort(new Comparator<Integer>() {
+/*		sortedFitnesses.sort(new Comparator<Integer>() {
 			@Override
 			public int compare(Integer o1, Integer o2) {
 				return o1.compareTo(o2); 
 			}
 		}); 
-		
+*/		
 		// Pick the fitness of the first chromosome to crossover. 
 		for (Integer fitness : sortedFitnesses) {
 			first += fitness; 	// Fitnesses are stored as negative integers. 
