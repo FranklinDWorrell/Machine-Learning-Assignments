@@ -1,5 +1,6 @@
 import java.util.ArrayList; 
 import java.util.Comparator; 
+import java.util.Observable; 
 import java.util.TreeMap; 
 import java.util.Random; 
 import java.util.Set; 
@@ -11,7 +12,7 @@ import java.util.Set;
  * @author Franklin D. Worrell
  * @version 4 March 2018
  */ 
-public class Population {
+public class Population extends Observable {
 	private static final int POP_SIZE = 200; 
 	private static final int ELITE_SIZE = 10; 
 	private static final int CROSSOVER_SIZE = 160; 
@@ -86,6 +87,8 @@ public class Population {
 		int currentFitness = this.getBest().getFitness(); 
 		int start = 0; 
 		int count = 0; 
+		// Clear the fitness map for updates between generations. 
+		this.fitnessMap.clear(); 
 		
 		for (Chromosome chromosome : this.list) {
 			// No change in current fitness, just increment count. 
@@ -220,6 +223,26 @@ public class Population {
 		initial.setFitnessMapAndSumOfFitnesses(); 
 		return initial; 
 	} 
+	
+	public void evolve(int targetFitness) {
+		Chromosome currentBest = this.getBest(); 
+		int currentFitness = currentBest.getFitness(); 
+		int iteration = 0; 	// the generation of the protein
+								
+		// Create successive generations until target fitness reached. 
+		while (currentFitness > targetFitness) {
+			iteration++; 
+			this.getNextGeneration(); 
+			currentBest = this.getBest(); 
+			if (currentBest.getFitness() < currentFitness) {
+				setChanged(); 
+				notifyObservers(currentBest); 
+			} 
+			currentFitness = currentBest.getFitness(); 
+			System.out.println("Generation " + iteration + '\t' + 
+							   this.reportFittestAndVolume()); 
+		}
+	}
 
 
 	/**
@@ -229,35 +252,35 @@ public class Population {
 	 * @param old the prior generation of <code>Chromosome</code>s
 	 * @return the next generation of <code>Chromosome</code>s
 	 */ 
-	public static Population getNextGeneration(Population old) {
-		Population young = new Population(old.getAcidString()); 
+	public void getNextGeneration() {
+		ArrayList<Chromosome> newList = new ArrayList<>(); 
 		
 		// Transfer elites and crossover pool to next generation. 
 		for (int i = 0; i < ELITE_SIZE; i++) {
-			young.add(old.get(i)); 
+			newList.add(this.get(i)); 
 		}
 		
 		// Compute crossovers in crossover pool. 
 		int crossed = 0; 
 		while (crossed < CROSSOVER_SIZE) { 
-			int leftAndRight[] = old.spinRouletteWheel();
-			int pivot = random.nextInt(young.acidString.length() - 2) + 1; 
-			Chromosome left = old.getChromosomeWithFitness(leftAndRight[0]); 
-			Chromosome right = old.getChromosomeWithFitness(leftAndRight[1]); 
+			int leftAndRight[] = this.spinRouletteWheel();
+			int pivot = random.nextInt(this.acidString.length() - 2) + 1; 
+			Chromosome left = this.getChromosomeWithFitness(leftAndRight[0]); 
+			Chromosome right = this.getChromosomeWithFitness(leftAndRight[1]); 
 			Chromosome newLeft = Chromosome.crossover(left, right, pivot); 
 			Chromosome newRight = Chromosome.crossover(right, left, pivot); 
 			
 			// If crossover created valid proteins, update the new generation. 
 			if (newLeft != null && newRight != null) {
-				young.add(newLeft); 
-				young.add(newRight); 
+				newList.add(newLeft); 
+				newList.add(newRight); 
 				crossed += 2; 
 			}
 		}
 		
 		// Generate random remaining. 
 		for (int i = 0; i < FILL_SIZE; i++) {
-			young.add(new Chromosome(old.getAcidString())); 
+			newList.add(new Chromosome(this.getAcidString())); 
 		} 
 		
 		// Apply mutations to non-elites. 
@@ -265,18 +288,18 @@ public class Population {
 		while (mutated < MUTATION_NUMBER) {
 			// Do not mutate elite or new randomly generated Chromosomes. 
 			int toMutate = random.nextInt(CROSSOVER_SIZE) + ELITE_SIZE; 
-			int pivot = random.nextInt(young.acidString.length() - 2) + 1;
-			Chromosome afterMutation = Chromosome.mutate(young.get(toMutate), pivot); 
+			int pivot = random.nextInt(this.acidString.length() - 2) + 1;
+			Chromosome afterMutation = Chromosome.mutate(newList.get(toMutate), pivot); 
 			if (afterMutation != null) {
-				young.set(toMutate, afterMutation); 
+				newList.set(toMutate, afterMutation); 
 				mutated++; 
 			}
 		} 
 		
-		// Sort the new generation for processing. 
-		young.sort(); 
-		young.setFitnessMapAndSumOfFitnesses(); 
-		return young; 
+		// Update the population and sort the new generation for processing. 
+		this.list = newList; 
+		this.sort(); 
+		this.setFitnessMapAndSumOfFitnesses(); 
 	}
 	
 	

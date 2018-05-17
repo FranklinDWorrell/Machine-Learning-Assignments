@@ -1,3 +1,5 @@
+import java.util.Observable; 
+import java.util.Observer; 
 import javafx.application.Application; 
 import javafx.event.ActionEvent; 
 import javafx.event.EventHandler; 
@@ -24,10 +26,11 @@ import javafx.stage.Stage;
  * @author Franklin D. Worrell
  * @version 4 March 2018 
  */ 
-public class Searcher extends Application {
+public class Searcher extends Application implements Observer {
 	private static final double DIAMETER = 30; 
 	private static final int OFFSET = 300; 
 	private static final int CANVAS_DIMENSION = 600; 
+	private Canvas canvas; 
 	
 	/**
 	 * Builds the buttons, text fields, and canvas required to run the 
@@ -38,7 +41,7 @@ public class Searcher extends Application {
 	@Override
 	public void start(Stage primaryStage) {
 		// Canvas for drawing the protein. 
-		final Canvas canvas = new Canvas(CANVAS_DIMENSION, CANVAS_DIMENSION); 
+		canvas = new Canvas(CANVAS_DIMENSION, CANVAS_DIMENSION); 
 		canvas.getGraphicsContext2D().setFont(new Font("Arial", 22)); 
 		
 		// Create text field for amino acid sequence. 
@@ -67,7 +70,6 @@ public class Searcher extends Application {
 		searchBtn.setOnAction(new EventHandler<ActionEvent>() {
 			
 			/**
-			 * Implements the main loop of the genetic algorithm. 
 			 * The search begins when the button is pressed and the
 			 * relevant parameters are read in from the text fields. 
 			 * @param event the button click event
@@ -79,25 +81,9 @@ public class Searcher extends Application {
 				int targetFitness = Integer.parseInt(fitnessField.getText()); 
 
 				// Build the initial, randomly generated population. 
-				Population population = Population.getInitialPopulation(acids); 
-				Chromosome currentBest = population.getBest(); 
-				int currentFitness = currentBest.getFitness(); 
-				int iteration = 0; 	// the generation of the protein
-				System.out.println(population.reportFittestAndVolume()); 
-								
-				// Create successive generations until target fitness reached. 
-				while (currentFitness > targetFitness) {
-					iteration++; 
-					population = Population.getNextGeneration(population); 
-					currentBest = population.getBest(); 
-					currentFitness = currentBest.getFitness(); 
-					System.out.println("Generation " + iteration + '\t' + 
-									   population.reportFittestAndVolume()); 
-				}
-				
-				// Draw the winning chromosome. 
-				drawChromosome(currentBest, iteration, 
-							   canvas.getGraphicsContext2D()); 
+				Population population = Population.getInitialPopulation(acids);
+				population.addObserver(Searcher.this); 
+				population.evolve(targetFitness); 
 			} 
 		}); 
 		
@@ -131,6 +117,25 @@ public class Searcher extends Application {
 	
 	
 	/**
+	 * When a new fittest <code>Chromosome</code> is found, it is drawn to the
+	 * canvas. 
+	 * @param o the <code>Population</code> that is evolving 
+	 * @param arg the <code>Chromosome</code> that is the new fittest found 
+	 */ 
+	@Override 
+	public void update(Observable o, Object arg) {
+		if (!(arg instanceof Chromosome)) {
+			throw new IllegalArgumentException("Message was not a Chromosome."); 
+		}
+		
+		else {
+			this.drawChromosome((Chromosome) arg, 
+								this.canvas.getGraphicsContext2D()); 
+		}
+	}
+	
+	
+	/**
 	 * Draws a <code>Chromosome</code>'s protein structure to the 
 	 * <code>Canvas</code> along with information about the generation 
 	 * that spawned it and the fitness of that <code>Chromosome</code>. 
@@ -138,8 +143,7 @@ public class Searcher extends Application {
 	 * @param iteration the generation that spawned the <code>Chromosome</code>
 	 * @param gc the <code>GraphicsContext</code> of the <code>Canvas</code> 
 	 */ 
-	public void drawChromosome(Chromosome chromosome, int iteration, 
-							   GraphicsContext gc) {
+	public void drawChromosome(Chromosome chromosome, GraphicsContext gc) {
 		// Clear and format canvas. 
 		gc.clearRect(0, 0, 600, 600); 	// Clear graphic of previous iteration. 
 		gc.setLineWidth(3); 
@@ -178,7 +182,7 @@ public class Searcher extends Application {
 		// Draw the iteration number and current fitness to the canvas. 
 		gc.setFill(Color.BLACK); 
 		gc.setLineWidth(1); 
-		gc.fillText("Generation: " + iteration, 25, 45); 
+//		gc.fillText("Generation: " + iteration, 25, 45); 
 		gc.fillText(((Integer) chromosome.getFitness()).toString(), 550, 575); 
 	} 
 	
