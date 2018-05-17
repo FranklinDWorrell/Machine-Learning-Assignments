@@ -16,6 +16,12 @@ public class Location {
 	} 
 	
 	
+	public Location(Location other) {
+		this.x = other.x; 
+		this.y = other.y; 
+	} 
+	
+	
 	public int getX() {
 		return this.x; 
 	}

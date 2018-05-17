@@ -78,12 +78,12 @@ public class Searcher extends Application implements Observer {
 			public void handle(ActionEvent event) {
 				// Start a run of the genetic algorithm with text from above.
 				String acids = acidField.getText(); 
-				int targetFitness = Integer.parseInt(fitnessField.getText()); 
+				int target = Integer.parseInt(fitnessField.getText()); 
 
 				// Build the initial, randomly generated population. 
-				Population population = Population.getInitialPopulation(acids);
+				Population population = Population.getInitialPopulation(acids, target);
 				population.addObserver(Searcher.this); 
-				population.evolve(targetFitness); 
+				population.evolve(); 
 			} 
 		}); 
 		

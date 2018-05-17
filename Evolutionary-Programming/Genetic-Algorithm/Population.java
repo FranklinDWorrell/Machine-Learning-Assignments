@@ -4,6 +4,8 @@ import java.util.Observable;
 import java.util.TreeMap; 
 import java.util.Random; 
 import java.util.Set; 
+import java.util.concurrent.ExecutorService; 
+import java.util.concurrent.Executors; 
 
 /**
  * Adds a level of abstraction that assists in running the search. Creates 
@@ -23,6 +25,7 @@ public class Population extends Observable {
 	
 	private ArrayList<Chromosome> list; 
 	private String acidString; 
+	private int targetFitness; 
 	private TreeMap<Integer, int[]> fitnessMap; 
 	private int sumOfFitnesses; 
 	
@@ -32,9 +35,10 @@ public class Population extends Observable {
 	 * <code>Population</code> instance. 
 	 * @param acidString the sequence of amino acids compromising the protein 
 	 */ 
-	public Population(String acidString) {
+	public Population(String acidString, int targetFitness) {
 		this.list = new ArrayList<>(POP_SIZE); 
 		this.acidString = acidString; 
+		this.targetFitness = targetFitness; 
 		this.fitnessMap = new TreeMap<>(); 
 		this.sumOfFitnesses = 0; 
 	} 
@@ -210,8 +214,9 @@ public class Population extends Observable {
 	 * @param acidString the amino acid sequence for the proteins 
 	 * @return a full protein population with randomly generated structures 
 	 */ 
-	public static Population getInitialPopulation(String acidString) {
-		Population initial = new Population(acidString); 
+	public static Population getInitialPopulation(String acidString, 
+												  int targetFitness) {
+		Population initial = new Population(acidString, targetFitness); 
 		
 		// Populate the first generation with entirely random instances. 
 		for (int i = 0; i < POP_SIZE; i++) {
@@ -224,24 +229,41 @@ public class Population extends Observable {
 		return initial; 
 	} 
 	
-	public void evolve(int targetFitness) {
-		Chromosome currentBest = this.getBest(); 
-		int currentFitness = currentBest.getFitness(); 
-		int iteration = 0; 	// the generation of the protein
-								
-		// Create successive generations until target fitness reached. 
-		while (currentFitness > targetFitness) {
-			iteration++; 
-			this.getNextGeneration(); 
-			currentBest = this.getBest(); 
-			if (currentBest.getFitness() < currentFitness) {
-				setChanged(); 
-				notifyObservers(currentBest); 
-			} 
-			currentFitness = currentBest.getFitness(); 
-			System.out.println("Generation " + iteration + '\t' + 
-							   this.reportFittestAndVolume()); 
-		}
+	
+	/**
+	 * Implements the main loop of the genetic algorithm. Given a target to 
+	 * search for, it generates successive generations until a solution is
+	 * reached. 
+	 * @param targetFitness the desired <code>Chromosome</code> fitness
+	 */ 
+	public void evolve() {
+		// Spawning a new thread permits display of intermediate results in GUI. 
+		ExecutorService pool = Executors.newCachedThreadPool(); 
+		pool.execute(new Runnable() {
+			/**
+			 * The main loop of the genetic algorithm runs in a separate thread. 
+			 */ 
+			@Override
+			public void run() {
+				Chromosome currentBest = Population.this.getBest(); 
+				int currentFitness = currentBest.getFitness(); 
+				int iteration = 0; 	// the generation of the protein
+										
+				// Create successive generations until target fitness reached. 
+				while (currentFitness > Population.this.targetFitness) {
+					iteration++; 
+					Population.this.produceNextGeneration(); 
+					currentBest = Population.this.getBest(); 
+					if (currentBest.getFitness() < currentFitness) {
+						setChanged(); 
+						notifyObservers(new Chromosome(currentBest)); 
+					} 
+					currentFitness = currentBest.getFitness(); 
+					System.out.println("Generation " + iteration + '\t' + 
+									   Population.this.reportFittestAndVolume()); 
+				}
+			}
+		}); 
 	}
 
 
@@ -252,7 +274,7 @@ public class Population extends Observable {
 	 * @param old the prior generation of <code>Chromosome</code>s
 	 * @return the next generation of <code>Chromosome</code>s
 	 */ 
-	public void getNextGeneration() {
+	public void produceNextGeneration() {
 		ArrayList<Chromosome> newList = new ArrayList<>(); 
 		
 		// Transfer elites and crossover pool to next generation. 
@@ -327,7 +349,7 @@ public class Population extends Observable {
 		}); 
 */		
 		// Pick the fitness of the first chromosome to crossover. 
-		for (Integer fitness : sortedFitnesses) {
+		for (Integer fitness : this.fitnessMap.keySet()) {
 			first += fitness; 	// Fitnesses are stored as negative integers. 
 			if (first <= 0) {	// Once the random is reduced to zero, pick. 
 				toCross[0] = fitness; 
