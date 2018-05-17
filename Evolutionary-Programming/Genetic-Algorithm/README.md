@@ -1,5 +1,5 @@
 ## Overview
-This folder contains the source code for an implementation of a genetic algorithm with a GUI. Specifically, the algorithm performs a non-deterministic search for a presecribed fitness of a protein structure.
+This folder contains the source code for an implementation of a genetic algorithm with a GUI. Specifically, the algorithm performs a non-deterministic search for a prescribed fitness of a protein structure.
 
 ## To Compile
 From this directory: `javac *.java`
