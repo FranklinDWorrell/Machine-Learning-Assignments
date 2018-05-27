@@ -1,8 +1,11 @@
 import java.util.ArrayList; 
 import java.util.Comparator; 
+import java.util.Observable; 
 import java.util.TreeMap; 
 import java.util.Random; 
 import java.util.Set; 
+import java.util.concurrent.ExecutorService; 
+import java.util.concurrent.Executors; 
 
 /**
  * Adds a level of abstraction that assists in running the search. Creates 
@@ -11,7 +14,7 @@ import java.util.Set;
  * @author Franklin D. Worrell
  * @version 4 March 2018
  */ 
-public class Population {
+public class Population extends Observable {
 	private static final int POP_SIZE = 200; 
 	private static final int ELITE_SIZE = 10; 
 	private static final int CROSSOVER_SIZE = 160; 
@@ -22,6 +25,7 @@ public class Population {
 	
 	private ArrayList<Chromosome> list; 
 	private String acidString; 
+	private int targetFitness; 
 	private TreeMap<Integer, int[]> fitnessMap; 
 	private int sumOfFitnesses; 
 	
@@ -31,9 +35,10 @@ public class Population {
 	 * <code>Population</code> instance. 
 	 * @param acidString the sequence of amino acids compromising the protein 
 	 */ 
-	public Population(String acidString) {
+	public Population(String acidString, int targetFitness) {
 		this.list = new ArrayList<>(POP_SIZE); 
 		this.acidString = acidString; 
+		this.targetFitness = targetFitness; 
 		this.fitnessMap = new TreeMap<>(); 
 		this.sumOfFitnesses = 0; 
 	} 
@@ -86,6 +91,8 @@ public class Population {
 		int currentFitness = this.getBest().getFitness(); 
 		int start = 0; 
 		int count = 0; 
+		// Clear the fitness map for updates between generations. 
+		this.fitnessMap.clear(); 
 		
 		for (Chromosome chromosome : this.list) {
 			// No change in current fitness, just increment count. 
@@ -174,12 +181,7 @@ public class Population {
 	 * <code>Chromosome</code> instance. 
 	 */ 
 	public void sort() {
-		this.list.sort(new Comparator<Chromosome>() {
-			@Override
-			public int compare(Chromosome o1, Chromosome o2) {
-				return o1.getFitness() - o2.getFitness(); 
-			}
-		}); 
+		this.list.sort((o1, o2) -> o1.getFitness() - o2.getFitness()); 
 	}
 	
 	
@@ -207,8 +209,9 @@ public class Population {
 	 * @param acidString the amino acid sequence for the proteins 
 	 * @return a full protein population with randomly generated structures 
 	 */ 
-	public static Population getInitialPopulation(String acidString) {
-		Population initial = new Population(acidString); 
+	public static Population getInitialPopulation(String acidString, 
+												  int targetFitness) {
+		Population initial = new Population(acidString, targetFitness); 
 		
 		// Populate the first generation with entirely random instances. 
 		for (int i = 0; i < POP_SIZE; i++) {
@@ -220,6 +223,43 @@ public class Population {
 		initial.setFitnessMapAndSumOfFitnesses(); 
 		return initial; 
 	} 
+	
+	
+	/**
+	 * Implements the main loop of the genetic algorithm. Given a target to 
+	 * search for, it generates successive generations until a solution is
+	 * reached. 
+	 * @param targetFitness the desired <code>Chromosome</code> fitness
+	 */ 
+	public void evolve() {
+		// Spawning a new thread permits display of intermediate results in GUI. 
+		ExecutorService pool = Executors.newSingleThreadExecutor(); 
+		pool.execute(new Runnable() {
+			/**
+			 * The main loop of the genetic algorithm runs in a separate thread. 
+			 */ 
+			@Override
+			public void run() {
+				Chromosome currentBest = Population.this.getBest(); 
+				int currentFitness = currentBest.getFitness(); 
+				int iteration = 0; 	// the generation of the protein
+										
+				// Create successive generations until target fitness reached. 
+				while (currentFitness > Population.this.targetFitness) {
+					iteration++; 
+					Population.this.produceNextGeneration(); 
+					currentBest = Population.this.getBest(); 
+					if (currentBest.getFitness() < currentFitness) {
+						setChanged(); 
+						notifyObservers(new Chromosome(currentBest)); 
+					} 
+					currentFitness = currentBest.getFitness(); 
+					System.out.println("Generation " + iteration + '\t' + 
+									   Population.this.reportFittestAndVolume()); 
+				}
+			}
+		}); 
+	}
 
 
 	/**
@@ -229,35 +269,35 @@ public class Population {
 	 * @param old the prior generation of <code>Chromosome</code>s
 	 * @return the next generation of <code>Chromosome</code>s
 	 */ 
-	public static Population getNextGeneration(Population old) {
-		Population young = new Population(old.getAcidString()); 
+	public void produceNextGeneration() {
+		ArrayList<Chromosome> newList = new ArrayList<>(); 
 		
 		// Transfer elites and crossover pool to next generation. 
 		for (int i = 0; i < ELITE_SIZE; i++) {
-			young.add(old.get(i)); 
+			newList.add(this.get(i)); 
 		}
 		
 		// Compute crossovers in crossover pool. 
 		int crossed = 0; 
 		while (crossed < CROSSOVER_SIZE) { 
-			int leftAndRight[] = old.spinRouletteWheel();
-			int pivot = random.nextInt(young.acidString.length() - 2) + 1; 
-			Chromosome left = old.getChromosomeWithFitness(leftAndRight[0]); 
-			Chromosome right = old.getChromosomeWithFitness(leftAndRight[1]); 
+			int leftAndRight[] = this.spinRouletteWheel();
+			int pivot = random.nextInt(this.acidString.length() - 2) + 1; 
+			Chromosome left = this.getChromosomeWithFitness(leftAndRight[0]); 
+			Chromosome right = this.getChromosomeWithFitness(leftAndRight[1]); 
 			Chromosome newLeft = Chromosome.crossover(left, right, pivot); 
 			Chromosome newRight = Chromosome.crossover(right, left, pivot); 
 			
 			// If crossover created valid proteins, update the new generation. 
 			if (newLeft != null && newRight != null) {
-				young.add(newLeft); 
-				young.add(newRight); 
+				newList.add(newLeft); 
+				newList.add(newRight); 
 				crossed += 2; 
 			}
 		}
 		
 		// Generate random remaining. 
 		for (int i = 0; i < FILL_SIZE; i++) {
-			young.add(new Chromosome(old.getAcidString())); 
+			newList.add(new Chromosome(this.getAcidString())); 
 		} 
 		
 		// Apply mutations to non-elites. 
@@ -265,18 +305,18 @@ public class Population {
 		while (mutated < MUTATION_NUMBER) {
 			// Do not mutate elite or new randomly generated Chromosomes. 
 			int toMutate = random.nextInt(CROSSOVER_SIZE) + ELITE_SIZE; 
-			int pivot = random.nextInt(young.acidString.length() - 2) + 1;
-			Chromosome afterMutation = Chromosome.mutate(young.get(toMutate), pivot); 
+			int pivot = random.nextInt(this.acidString.length() - 2) + 1;
+			Chromosome afterMutation = Chromosome.mutate(newList.get(toMutate), pivot); 
 			if (afterMutation != null) {
-				young.set(toMutate, afterMutation); 
+				newList.set(toMutate, afterMutation); 
 				mutated++; 
 			}
 		} 
 		
-		// Sort the new generation for processing. 
-		young.sort(); 
-		young.setFitnessMapAndSumOfFitnesses(); 
-		return young; 
+		// Update the population and sort the new generation for processing. 
+		this.list = newList; 
+		this.sort(); 
+		this.setFitnessMapAndSumOfFitnesses(); 
 	}
 	
 	
@@ -296,15 +336,9 @@ public class Population {
 		// Get an ordered list of fitness to subtract from the random numbers. 
 		ArrayList<Integer> sortedFitnesses = new ArrayList<>(
 				this.fitnessMap.keySet()); 
-/*		sortedFitnesses.sort(new Comparator<Integer>() {
-			@Override
-			public int compare(Integer o1, Integer o2) {
-				return o1.compareTo(o2); 
-			}
-		}); 
-*/		
+
 		// Pick the fitness of the first chromosome to crossover. 
-		for (Integer fitness : sortedFitnesses) {
+		for (Integer fitness : this.fitnessMap.keySet()) {
 			first += fitness; 	// Fitnesses are stored as negative integers. 
 			if (first <= 0) {	// Once the random is reduced to zero, pick. 
 				toCross[0] = fitness; 

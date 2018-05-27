@@ -17,8 +17,8 @@ public class Chromosome {
 		moveMap = new HashMap<>(); 
 		moveMap.put(1, new int[] {1, 2, 4}); 	// Given a previous direction, 
 		moveMap.put(2, new int[] {2, 3, 4});	// this map returns an array of 
-		moveMap.put(3, new int[] {1, 2, 3}); 	// of valid next directions to
-		moveMap.put(4, new int[] {1, 2, 4}); 	// move. 
+		moveMap.put(3, new int[] {1, 2, 3}); 	// valid next move directions. 
+		moveMap.put(4, new int[] {1, 2, 4}); 
 	}
 	
 	private Location[] locations; 	// Coordinates of amino acids
@@ -66,6 +66,26 @@ public class Chromosome {
 		this.locations = locations; 
 		this.fitness = fitness; 
 	} 
+	
+	
+	/**
+	 * Copy constructor. Returns a deep copy. 
+	 * @param other the <code>Chromosome</code> to copy. 
+	 * @return a deep copy of the given <code>Chromosome</code>
+	 */ 
+	public Chromosome(Chromosome other) {
+		this.acids = new boolean[other.acids.length]; 
+		for (int i = 0; i < other.acids.length; i++) {
+			this.acids[i] = other.acids[i]; 
+		}
+		
+		this.locations = new Location[other.locations.length]; 
+		for (int i = 0; i < other.locations.length; i++) {
+			this.locations[i] = new Location(other.locations[i]); 
+		} 
+		
+		this.fitness = other.fitness; 
+	}
 	
 	
 	/**
