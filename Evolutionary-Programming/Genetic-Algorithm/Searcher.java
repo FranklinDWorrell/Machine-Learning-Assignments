@@ -67,15 +67,13 @@ public class Searcher extends Application implements Observer {
 		// Create button to start search with genetic algorithm. 
 		Button searchBtn = new Button(); 
 		searchBtn.setText("Start"); 
-		searchBtn.setOnAction(new EventHandler<ActionEvent>() {
-			
+		searchBtn.setOnAction(
 			/**
 			 * The search begins when the button is pressed and the
 			 * relevant parameters are read in from the text fields. 
 			 * @param event the button click event
 			 */ 
-			@Override 
-			public void handle(ActionEvent event) {
+			event -> {
 				// Start a run of the genetic algorithm with text from above.
 				String acids = acidField.getText(); 
 				int target = Integer.parseInt(fitnessField.getText()); 
@@ -84,8 +82,8 @@ public class Searcher extends Application implements Observer {
 				Population population = Population.getInitialPopulation(acids, target);
 				population.addObserver(Searcher.this); 
 				population.evolve(); 
-			} 
-		}); 
+			}
+		); 
 		
 		Label diagramLabel = new Label("First acid will be filled."); 
 		diagramLabel.setFont(new Font("Arial", 18)); 

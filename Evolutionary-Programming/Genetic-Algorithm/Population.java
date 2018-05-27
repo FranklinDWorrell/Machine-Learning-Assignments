@@ -181,9 +181,7 @@ public class Population extends Observable {
 	 * <code>Chromosome</code> instance. 
 	 */ 
 	public void sort() {
-		this.list.sort(
-			(o1, o2) -> {return o1.getFitness() - o2.getFitness();}
-		); 
+		this.list.sort((o1, o2) -> o1.getFitness() - o2.getFitness()); 
 	}
 	
 	
