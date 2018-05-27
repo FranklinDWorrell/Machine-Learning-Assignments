@@ -181,12 +181,9 @@ public class Population extends Observable {
 	 * <code>Chromosome</code> instance. 
 	 */ 
 	public void sort() {
-		this.list.sort(new Comparator<Chromosome>() {
-			@Override
-			public int compare(Chromosome o1, Chromosome o2) {
-				return o1.getFitness() - o2.getFitness(); 
-			}
-		}); 
+		this.list.sort(
+			(o1, o2) -> {return o1.getFitness() - o2.getFitness();}
+		); 
 	}
 	
 	
@@ -238,7 +235,7 @@ public class Population extends Observable {
 	 */ 
 	public void evolve() {
 		// Spawning a new thread permits display of intermediate results in GUI. 
-		ExecutorService pool = Executors.newCachedThreadPool(); 
+		ExecutorService pool = Executors.newSingleThreadExecutor(); 
 		pool.execute(new Runnable() {
 			/**
 			 * The main loop of the genetic algorithm runs in a separate thread. 
@@ -341,13 +338,7 @@ public class Population extends Observable {
 		// Get an ordered list of fitness to subtract from the random numbers. 
 		ArrayList<Integer> sortedFitnesses = new ArrayList<>(
 				this.fitnessMap.keySet()); 
-/*		sortedFitnesses.sort(new Comparator<Integer>() {
-			@Override
-			public int compare(Integer o1, Integer o2) {
-				return o1.compareTo(o2); 
-			}
-		}); 
-*/		
+
 		// Pick the fitness of the first chromosome to crossover. 
 		for (Integer fitness : this.fitnessMap.keySet()) {
 			first += fitness; 	// Fitnesses are stored as negative integers. 
