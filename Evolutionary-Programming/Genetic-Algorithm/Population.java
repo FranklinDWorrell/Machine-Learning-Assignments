@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
  * initial generation and creates a new generation given a previous one. 
  * Implements population-level functions like crossover and mutation. 
  * @author Franklin D. Worrell
- * @version 4 March 2018
+ * @version 27 May 2018
  */ 
 public class Population extends Observable {
 	private static final int POP_SIZE = 200; 
@@ -226,39 +226,27 @@ public class Population extends Observable {
 	
 	
 	/**
-	 * Implements the main loop of the genetic algorithm. Given a target to 
-	 * search for, it generates successive generations until a solution is
-	 * reached. 
-	 * @param targetFitness the desired <code>Chromosome</code> fitness
+	 * Implements the main loop of the genetic algorithm. Generates successive 
+	 * generations until a solution is reached. 
 	 */ 
 	public void evolve() {
-		// Spawning a new thread permits display of intermediate results in GUI. 
-		ExecutorService pool = Executors.newSingleThreadExecutor(); 
-		pool.execute(new Runnable() {
-			/**
-			 * The main loop of the genetic algorithm runs in a separate thread. 
-			 */ 
-			@Override
-			public void run() {
-				Chromosome currentBest = Population.this.getBest(); 
-				int currentFitness = currentBest.getFitness(); 
-				int iteration = 0; 	// the generation of the protein
-										
-				// Create successive generations until target fitness reached. 
-				while (currentFitness > Population.this.targetFitness) {
-					iteration++; 
-					Population.this.produceNextGeneration(); 
-					currentBest = Population.this.getBest(); 
-					if (currentBest.getFitness() < currentFitness) {
-						setChanged(); 
-						notifyObservers(new Chromosome(currentBest)); 
-					} 
-					currentFitness = currentBest.getFitness(); 
-					System.out.println("Generation " + iteration + '\t' + 
-									   Population.this.reportFittestAndVolume()); 
-				}
-			}
-		}); 
+		Chromosome currentBest = Population.this.getBest(); 
+		int currentFitness = currentBest.getFitness(); 
+		int iteration = 0; 	// the generation of the protein
+								
+		// Create successive generations until target fitness reached. 
+		while (currentFitness > Population.this.targetFitness) {
+			iteration++; 
+			Population.this.produceNextGeneration(); 
+			currentBest = Population.this.getBest(); 
+			if (currentBest.getFitness() < currentFitness) {
+				setChanged(); 
+				notifyObservers(new Chromosome(currentBest)); 
+			} 
+			currentFitness = currentBest.getFitness(); 
+			System.out.println("Generation " + iteration + '\t' + 
+							   Population.this.reportFittestAndVolume()); 
+		}
 	}
 
 

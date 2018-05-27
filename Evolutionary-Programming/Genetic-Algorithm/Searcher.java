@@ -1,5 +1,7 @@
 import java.util.Observable; 
 import java.util.Observer; 
+import java.util.concurrent.ExecutorService; 
+import java.util.concurrent.Executors; 
 import javafx.application.Application; 
 import javafx.event.ActionEvent; 
 import javafx.event.EventHandler; 
@@ -24,13 +26,14 @@ import javafx.stage.Stage;
  * and displaying its <code>fitness</code>. Implements the main loop of the 
  * genetic algorithm by building the consecutive generations. 
  * @author Franklin D. Worrell
- * @version 4 March 2018 
+ * @version 27 May 2018 
  */ 
 public class Searcher extends Application implements Observer {
 	private static final double DIAMETER = 30; 
 	private static final int OFFSET = 300; 
 	private static final int CANVAS_DIMENSION = 600; 
 	private Canvas canvas; 
+	private ExecutorService thread = Executors.newSingleThreadExecutor(); 
 	
 	/**
 	 * Builds the buttons, text fields, and canvas required to run the 
@@ -68,21 +71,22 @@ public class Searcher extends Application implements Observer {
 		Button searchBtn = new Button(); 
 		searchBtn.setText("Start"); 
 		searchBtn.setOnAction(
-			/**
-			 * The search begins when the button is pressed and the
-			 * relevant parameters are read in from the text fields. 
-			 * @param event the button click event
-			 */ 
 			event -> {
-				// Start a run of the genetic algorithm with text from above.
+				// Collect search parameters from the UI.
 				String acids = acidField.getText(); 
 				int target = Integer.parseInt(fitnessField.getText()); 
-
-				// Build the initial, randomly generated population. 
-				Population population = Population.getInitialPopulation(acids, target);
-				population.addObserver(Searcher.this); 
-				population.evolve(); 
-			}
+				
+				// Create and start a new search in a separate thread. 
+				Searcher.this.thread.execute(
+						new Search(acids, target, Searcher.this)); 
+/*					() -> {
+						Population population = Population.getInitialPopulation(
+								acids, target);
+						population.addObserver(Searcher.this); 
+						population.evolve(); 
+					}
+				);
+*/			}
 		); 
 		
 		Label diagramLabel = new Label("First acid will be filled."); 
