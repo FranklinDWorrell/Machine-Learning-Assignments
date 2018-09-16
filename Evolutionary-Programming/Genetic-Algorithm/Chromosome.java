@@ -254,13 +254,14 @@ public class Chromosome {
 		boolean[] wasTried = {false, false, false}; 
 		int numberAttempted = 0; 
 		while (numberAttempted < 3) {
-			int direction = Chromosome.random.nextInt(3); 
+			int directionIndex = Chromosome.random.nextInt(3); 
+			int direction = availableDirections[directionIndex]; 
 			
 			// Ensure direction wasn't previously tried. If so, try again. 
-			if (wasTried[direction]) { continue; } 
+			if (wasTried[directionIndex]) { continue; } 
 			
 			// Untried direction generated. Shift and rotate bottom of protein. 
-			wasTried[direction] = true; 
+			wasTried[directionIndex] = true; 
 			numberAttempted++; 
 			// Find the new starting point for the bottom. 
 			Location origin = Location.createNextLocation(left.locations[pivot], 
